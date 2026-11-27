@@ -4,17 +4,29 @@ import time
 import pandas as pd
 
 from recomendador.data import load, load_tags
-from recomendador.evaluate import evaluate
+from recomendador.evaluate import evaluate_per_user, summarize
 from recomendador.models import (
     ContentRecommender, ItemKNNRecommender, PopularityRecommender, RandomRecommender,
 )
 from recomendador.split import remove_test_tags, temporal_leave_last_out
+from recomendador.stats import bootstrap_ci, paired_bootstrap
+
+K = 10
+METRICA = "ndcg"  # métrica principal das comparações
+REFERENCIA = "Popularidade (contagem)"
+PARES_EXTRAS = [  # perguntas específicas além de "vence a referência?"
+    ("Item-item k=200 (implícito)", "Item-item k=50 (implícito)"),
+    ("Item-item k=200 (implícito)", "Item-item k=20 (implícito)"),
+    ("Item-item k=50 (implícito)", "Item-item k=50 (notas)"),
+    ("Conteúdo (gêneros + tags)", "Conteúdo (gêneros)"),
+]
 
 
 def main() -> None:
     ratings, movies = load()
     train, test = temporal_leave_last_out(ratings, n_test=5)
     tags = remove_test_tags(load_tags(), test)
+    n_items = train["movieId"].nunique()
 
     modelos = [
         RandomRecommender(),
@@ -27,15 +39,38 @@ def main() -> None:
         ItemKNNRecommender(k_vizinhos=200),
         ItemKNNRecommender(k_vizinhos=50, implicito=False),
     ]
-    resultados = []
+
+    por_usuario, resumos = {}, []
     for m in modelos:
         inicio = time.perf_counter()
-        resultado = evaluate(m.fit(train), train, test, k=10)
-        resultado["tempo_s"] = round(time.perf_counter() - inicio, 1)
-        resultados.append(resultado)
+        per_user = evaluate_per_user(m.fit(train), test, K)
+        resumo = summarize(per_user, m.name, n_items, K)
+        _, inf, sup = bootstrap_ci(per_user[METRICA])
+        resumo[f"IC95% {METRICA}"] = f"[{inf:.4f}, {sup:.4f}]"
+        resumo["tempo_s"] = round(time.perf_counter() - inicio, 1)
+        por_usuario[m.name] = per_user
+        resumos.append(resumo)
         print(f"✓ {m.name}")
-    print()
-    print(pd.DataFrame(resultados).to_string(index=False))
+
+    print("\n=== Resultados ===")
+    print(pd.DataFrame(resumos).to_string(index=False))
+
+    pares = [(nome, REFERENCIA) for nome in por_usuario if nome != REFERENCIA] + PARES_EXTRAS
+    comparacoes = []
+    for a, b in pares:
+        r = paired_bootstrap(por_usuario[a][METRICA], por_usuario[b][METRICA])
+        comparacoes.append({
+            "modelo A": a,
+            "modelo B": b,
+            f"Δ {METRICA}@{K}": round(r["diferenca"], 4),
+            "IC95%": f"[{r['ic_inf']:+.4f}, {r['ic_sup']:+.4f}]",
+            "p": round(r["p_valor"], 3),
+            "resultado": ("A melhor" if r["diferenca"] > 0 else "B melhor")
+            if r["significativo"] else "empate (inconclusivo)",
+        })
+
+    print(f"\n=== Comparações pareadas ({METRICA}@{K}, bootstrap por usuário) ===")
+    print(pd.DataFrame(comparacoes).to_string(index=False))
 
 
 if __name__ == "__main__":

@@ -23,6 +23,9 @@ para todas, de forma justa e reproduzível.
 - **Relevante** = nota ≥ 4 no teste.
 - **Métricas**: Precision@10, Recall@10, NDCG@10 (posição importa) e **cobertura**
   (quanto do catálogo o modelo consegue recomendar).
+- **Intervalos de confiança (bootstrap por usuário)**: cada métrica vem com um IC de 95%, e os
+  modelos são comparados de forma **pareada** (nos mesmos usuários). Uma diferença só é
+  considerada real quando o intervalo da diferença não contém zero.
 - **Sem vazamento de tags**: tags que um usuário aplicou aos filmes do próprio teste são
   removidas antes do treino, para o modelo de conteúdo não "espiar" a resposta.
 
@@ -87,7 +90,30 @@ cobertura intermediária entre popularidade e conteúdo. Esperamos que:
 - o **modo implícito** (só "avaliou ou não") vença o **modo por notas**, já que a tarefa é
   prever *o que* a pessoa vai assistir, não *quanto* vai gostar.
 
-*Resultados: a preencher após `python scripts/comparar.py`.*
+| Modelo | Precision@10 | Recall@10 | NDCG@10 | Cobertura | Tempo |
+|--------|-------------:|----------:|--------:|----------:|------:|
+| Item-item k=20 (implícito) | 0,0256 | 0,0767 | 0,0514 | 8,0% | 2,1 s |
+| Item-item k=50 (implícito) | 0,0247 | 0,0780 | 0,0480 | 7,6% | 2,2 s |
+| Item-item k=200 (implícito) | 0,0264 | 0,0824 | 0,0546 | 7,0% | 3,9 s |
+| Item-item k=50 (notas) | 0,0220 | 0,0655 | 0,0506 | 12,3% | 2,3 s |
+
+**Primeiro modelo a superar a popularidade.** O melhor item-item (k=200) ganha cerca de 53% em
+precision, 67% em recall e 38% em NDCG, recomendando um catálogo 6 vezes mais variado.
+
+- **K e cobertura:** confirmado. Quanto mais vizinhos, mais o modelo converge para os filmes
+  populares (cobertura de 8,0% para 7,0%).
+- **K e precisão:** inconclusivo. As diferenças equivalem a poucos acertos e podem ser ruído.
+- **Implícito × notas:** parcialmente confirmado. O implícito vence em precision e recall,
+  mas o modo por notas empata no NDCG e tem a maior cobertura entre os colaborativos (12,3%):
+  as notas trocam um pouco de acerto por diversidade.
+
+### Significância estatística
+
+*A preencher após `python scripts/comparar.py` (tabela "Comparações pareadas").*
+
+> **Cuidado com comparações múltiplas:** com cerca de 12 comparações a 95% de confiança, é
+> esperado que ao menos uma pareça significativa por acaso. Resultados com p perto de 0,05
+> devem ser lidos com cautela (uma correção de Bonferroni exigiria p < 0,004).
 
 ## Estrutura
 ```
@@ -95,7 +121,8 @@ src/recomendador/
 ├── data.py          # download e carga da MovieLens
 ├── split.py         # divisão temporal treino/teste
 ├── metrics.py       # métricas de ranking
-├── evaluate.py      # avaliação padronizada
+├── evaluate.py      # avaliação padronizada (agregada e por usuário)
+├── stats.py         # bootstrap e comparações pareadas
 └── models/
     ├── base.py      # interface comum (fit / recommend)
     ├── popularity.py
