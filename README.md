@@ -122,7 +122,9 @@ sinal (coocorrência), com cobertura menor; mais fatores devem aumentar a cobert
 | SVD 100 fatores (implícito) | 0,0280 | 0,0906 | 0,0590 | 8,5% | 3,1 s |
 | **SVD 50 fatores (notas)** | **0,0327** | **0,1007** | **0,0685** | 6,8% | 1,8 s |
 
-- **SVD × item-item:** confirmado o empate entre as versões implícitas (p = 0,614).
+- **SVD × item-item:** confirmado o empate entre as versões implícitas (p = 0,614). Já o SVD
+  por notas supera o melhor item-item (+0,0139 de NDCG, p = 0,008), mas sem sobreviver à
+  correção de Bonferroni: há indício de vantagem, não prova.
 - **Fatores e cobertura:** confirmado (5,4% → 8,5%), sem diferença significativa de acerto
   entre 20 e 100 fatores. A cobertura só fica abaixo da do item-item com poucos fatores.
 - **Surpresa: notas × implícito.** No SVD, as notas vencem com robustez, ao contrário do
@@ -156,7 +158,7 @@ Bonferroni para 20 comparações: **p < 0,0025**.
 | SVD 50 × Item-item k=200 | +0,0023 | [−0,0068; +0,0115] | 0,614 | Empate |
 | SVD 100 × SVD 20 | −0,0006 | [−0,0097; +0,0089] | 0,932 | Empate |
 | SVD 50 implícito × notas | −0,0115 | [−0,0179; −0,0054] | <0,001 | Notas melhor (robusto) |
-| SVD 50 notas × Item-item k=200 | *a preencher* | | | |
+| SVD 50 notas × Item-item k=200 | +0,0139 | [+0,0039; +0,0249] | 0,008 | SVD melhor (não robusto) |
 
 **Por que é tão difícil separar os modelos:** são só 542 usuários, com cerca de 3 filmes
 relevantes cada, e acertos são raros. Isso gera muita variância e explica a quantidade de
@@ -171,7 +173,9 @@ empates entre variantes próximas.
 3. **Precisão × diversidade é um trade-off real.** A popularidade acerta, mas recomenda 1% do
    catálogo; o conteúdo diversifica, mas erra; o SVD encontra o melhor equilíbrio.
 4. **Médias enganam.** O item-item parecia 38% melhor que a popularidade, mas o bootstrap mostrou
-   evidência fraca. Só as variantes do SVD resistiram aos testes mais rigorosos.
+   evidência fraca. Só as variantes do SVD resistiram aos testes mais rigorosos. Entre os dois
+   melhores modelos, o SVD por notas tem indício de vantagem sobre o item-item (p = 0,008), mas
+   sem robustez.
 5. **Limitação:** com 542 usuários, o poder estatístico é baixo. Uma base maior permitiria
    distinguir variantes que aqui empataram.
 
