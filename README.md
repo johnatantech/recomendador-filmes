@@ -5,7 +5,9 @@ Compara quatro famílias de algoritmos de recomendação sobre a base pública
 avaliações de 610 usuários), usando **a mesma divisão de dados, as mesmas métricas e testes de
 significância estatística** para todas.
 
-🔗 **Demo:** *link do Streamlit a adicionar após o deploy*
+[![Abrir no Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://recomendador-filmes-jf.streamlit.app)
+
+🔗 **Demo:** [recomendador-filmes-jf.streamlit.app](https://recomendador-filmes-jf.streamlit.app)
 
 ## Pergunta central
 > Quanto uma abordagem mais sofisticada realmente ganha sobre um baseline simples?
@@ -174,6 +176,9 @@ empates entre variantes próximas.
    distinguir variantes que aqui empataram.
 
 ## App interativo
+
+**Acesse:** [recomendador-filmes-jf.streamlit.app](https://recomendador-filmes-jf.streamlit.app)
+(no plano gratuito, o app pode estar "dormindo"; ele volta em cerca de um minuto).
 
 O app permite marcar filmes de que você gosta e comparar, lado a lado, as recomendações da
 popularidade, do item-item (com a explicação "porque você marcou X") e do SVD. Ele também mostra
