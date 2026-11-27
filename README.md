@@ -14,7 +14,7 @@ para todas, de forma justa e reproduzível.
 | 0 | Aleatório | Piso de referência | ✅ |
 | 1 | Popularidade (contagem / média bayesiana) | O que todo mundo vê | ✅ |
 | 2 | Conteúdo (TF-IDF de gêneros e tags) | Filmes parecidos com os que você gostou | ✅ |
-| 3 | Filtragem colaborativa item-item | Quem gostou de X também gostou de Y | ⏳ |
+| 3 | Filtragem colaborativa item-item | Quem gostou de X também gostou de Y | ✅ |
 | 4 | Fatoração de matrizes (SVD) | Gostos latentes de usuários e filmes | ⏳ |
 
 ## Metodologia
@@ -66,6 +66,27 @@ python scripts/comparar.py   # baixa a base na primeira execução
 recebe uma lista personalizada pelos gêneros e tags que prefere. A precisão pode cair, já que
 "parecido com o que você gostou" não é o mesmo que "o que você vai assistir em seguida".
 
+| Modelo | Precision@10 | Recall@10 | NDCG@10 | Cobertura |
+|--------|-------------:|----------:|--------:|----------:|
+| Conteúdo (gêneros) | 0,0013 | 0,0035 | 0,0026 | 19,3% |
+| Conteúdo (gêneros + tags) | 0,0022 | 0,0074 | 0,0045 | 20,1% |
+
+**Hipótese confirmada.** A cobertura subiu cerca de 16 vezes em relação à popularidade, mas a
+precisão caiu cerca de 8 vezes. Os gêneros são genéricos demais (milhares de filmes empatam)
+e o modelo ignora o viés de popularidade: recomenda títulos obscuros que combinam "no papel",
+mas que pouca gente assiste. As tags melhoram o resultado, porém a diferença (cerca de 7 para
+12 acertos em mais de 5 mil recomendações) é pequena demais para conclusões firmes.
+
+### Fase 3: filtragem colaborativa item-item
+
+**Hipótese registrada antes de rodar:** o item-item deve superar a popularidade em precisão,
+porque usa comportamento real ("quem viu X também viu Y") em vez de rótulos, mantendo uma
+cobertura intermediária entre popularidade e conteúdo. Esperamos que:
+- **K pequeno** (poucos vizinhos) aumente a cobertura e o ruído; **K grande** aproxime o
+  modelo da popularidade;
+- o **modo implícito** (só "avaliou ou não") vença o **modo por notas**, já que a tarefa é
+  prever *o que* a pessoa vai assistir, não *quanto* vai gostar.
+
 *Resultados: a preencher após `python scripts/comparar.py`.*
 
 ## Estrutura
@@ -78,7 +99,8 @@ src/recomendador/
 └── models/
     ├── base.py      # interface comum (fit / recommend)
     ├── popularity.py
-    └── content.py   # TF-IDF de gêneros e tags
+    ├── content.py   # TF-IDF de gêneros e tags
+    └── item_knn.py  # colaborativa item-item com K vizinhos
 scripts/comparar.py  # tabela comparativa
 tests/
 ```
@@ -87,6 +109,8 @@ tests/
 - **Interface única (`Recommender`)**: cada modelo implementa `fit()` e `_score()`;
   a avaliação não muda quando entra um modelo novo.
 - **Baselines primeiro**: um modelo complexo só se justifica se vencer o aleatório e a popularidade.
+- **Similaridade em blocos**: a matriz item-item completa ocuparia centenas de MB; calculada
+  em blocos e mantendo só os K vizinhos de cada filme, o pico de memória fica bem menor.
 - **Base fora do Git**: a licença do GroupLens não permite redistribuição; o download é automático.
 
 ## Licença dos dados

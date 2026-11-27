@@ -1,9 +1,13 @@
 """Uso: python scripts/comparar.py"""
+import time
+
 import pandas as pd
 
 from recomendador.data import load, load_tags
 from recomendador.evaluate import evaluate
-from recomendador.models import ContentRecommender, PopularityRecommender, RandomRecommender
+from recomendador.models import (
+    ContentRecommender, ItemKNNRecommender, PopularityRecommender, RandomRecommender,
+)
 from recomendador.split import remove_test_tags, temporal_leave_last_out
 
 
@@ -18,8 +22,19 @@ def main() -> None:
         PopularityRecommender("media_ponderada"),
         ContentRecommender(movies),
         ContentRecommender(movies, tags),
+        ItemKNNRecommender(k_vizinhos=20),
+        ItemKNNRecommender(k_vizinhos=50),
+        ItemKNNRecommender(k_vizinhos=200),
+        ItemKNNRecommender(k_vizinhos=50, implicito=False),
     ]
-    resultados = [evaluate(m.fit(train), train, test, k=10) for m in modelos]
+    resultados = []
+    for m in modelos:
+        inicio = time.perf_counter()
+        resultado = evaluate(m.fit(train), train, test, k=10)
+        resultado["tempo_s"] = round(time.perf_counter() - inicio, 1)
+        resultados.append(resultado)
+        print(f"✓ {m.name}")
+    print()
     print(pd.DataFrame(resultados).to_string(index=False))
 
 
