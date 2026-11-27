@@ -51,3 +51,6 @@ class PopularityRecommender(Recommender):
 
     def _score(self, user_id: int) -> pd.Series:
         return self.scores_
+
+    def _score_history(self, history: dict[int, float]) -> pd.Series:
+        return self.scores_

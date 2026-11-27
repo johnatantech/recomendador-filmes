@@ -24,6 +24,7 @@ PARES_EXTRAS = [  # perguntas específicas além de "vence a referência?"
     ("SVD 50 fatores (implícito)", "Item-item k=200 (implícito)"),
     ("SVD 100 fatores (implícito)", "SVD 20 fatores (implícito)"),
     ("SVD 50 fatores (implícito)", "SVD 50 fatores (notas)"),
+    ("SVD 50 fatores (notas)", "Item-item k=200 (implícito)"),
 ]
 
 

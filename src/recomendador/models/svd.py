@@ -34,6 +34,7 @@ class SVDRecommender(Recommender):
         users = np.sort(ratings["userId"].unique())
         self._user_pos = pd.Series(np.arange(len(users)), index=users)
         item_pos = pd.Series(np.arange(len(self._items)), index=self._items)
+        self._item_pos = item_pos
 
         valores = (
             np.ones(len(ratings)) if self.implicito else ratings["rating"].to_numpy(float)
@@ -57,3 +58,11 @@ class SVDRecommender(Recommender):
         historico = self._X[self._user_pos[user_id]]  # 1 × filmes
         scores = (historico @ self.V_) @ self.V_.T     # 1 × filmes
         return pd.Series(np.asarray(scores).ravel(), index=self._items)
+
+    def _score_history(self, history: dict[int, float]) -> pd.Series:
+        filmes = [m for m in history if m in self._item_pos.index]
+        x = np.zeros(len(self._items))
+        x[self._item_pos.loc[filmes].to_numpy()] = (
+            1.0 if self.implicito else [history[m] for m in filmes]
+        )
+        return pd.Series((x @ self.V_) @ self.V_.T, index=self._items)

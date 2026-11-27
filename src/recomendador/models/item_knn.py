@@ -34,6 +34,7 @@ class ItemKNNRecommender(Recommender):
         users = np.sort(ratings["userId"].unique())
         self._user_pos = pd.Series(np.arange(len(users)), index=users)
         item_pos = pd.Series(np.arange(len(self._items)), index=self._items)
+        self._item_pos = item_pos
 
         if self.implicito:
             valores = np.ones(len(ratings), dtype=np.float32)
@@ -83,3 +84,30 @@ class ItemKNNRecommender(Recommender):
         historico = self._X[self._user_pos[user_id]]  # 1 × filmes
         scores = self.sim_ @ historico.T              # filmes × 1
         return pd.Series(scores.toarray().ravel(), index=self._items)
+
+    def _history_vector(self, history: dict[int, float]) -> csr_matrix:
+        filmes = [m for m in history if m in self._item_pos.index]
+        valores = np.array([history[m] for m in filmes], dtype=np.float32)
+        if self.implicito:
+            valores = np.ones_like(valores)
+        elif len(valores):
+            centradas = valores - valores.mean()
+            # notas todas iguais (ex.: só "curti") viram zero; nesse caso usa peso 1
+            valores = centradas if np.any(centradas) else np.ones_like(valores)
+        return csr_matrix(
+            (valores, (np.zeros(len(filmes), dtype=int), self._item_pos.loc[filmes].to_numpy())),
+            shape=(1, len(self._items)),
+        )
+
+    def _score_history(self, history: dict[int, float]) -> pd.Series:
+        scores = self.sim_ @ self._history_vector(history).T
+        return pd.Series(scores.toarray().ravel(), index=self._items)
+
+    def explain(self, movie_id: int, history: dict[int, float]) -> int | None:
+        """Qual filme do histórico mais "puxou" esta recomendação."""
+        if movie_id not in self._item_pos.index:
+            return None
+        linha = self.sim_[self._item_pos[movie_id]].toarray().ravel()
+        candidatos = {m: linha[self._item_pos[m]] for m in history if m in self._item_pos.index}
+        melhor = max(candidatos, key=candidatos.get, default=None)
+        return melhor if melhor is not None and candidatos[melhor] > 0 else None
