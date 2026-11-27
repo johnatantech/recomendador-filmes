@@ -37,3 +37,10 @@ def load(dest: Path = DATA_DIR) -> tuple[pd.DataFrame, pd.DataFrame]:
     ratings["timestamp"] = pd.to_datetime(ratings["timestamp"], unit="s")
     movies = pd.read_csv(path / "movies.csv")
     return ratings, movies
+
+
+def load_tags(dest: Path = DATA_DIR) -> pd.DataFrame:
+    """Tags livres que os usuários aplicaram aos filmes."""
+    tags = pd.read_csv(download(dest) / "tags.csv")
+    tags["timestamp"] = pd.to_datetime(tags["timestamp"], unit="s")
+    return tags

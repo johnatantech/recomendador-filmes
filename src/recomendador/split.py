@@ -16,3 +16,14 @@ def temporal_leave_last_out(
     test = r[pos_from_end < n_test]
     train = r[pos_from_end >= n_test]
     return train.reset_index(drop=True), test.reset_index(drop=True)
+
+
+def remove_test_tags(tags: pd.DataFrame, test: pd.DataFrame) -> pd.DataFrame:
+    """Remove tags que um usuário aplicou a filmes que estão no teste dele.
+
+    Sem isso, o modelo de conteúdo "veria" a opinião do usuário sobre o filme
+    que ele deveria adivinhar (vazamento de dados).
+    """
+    pares_teste = test[["userId", "movieId"]].drop_duplicates().assign(_teste=True)
+    merged = tags.merge(pares_teste, on=["userId", "movieId"], how="left")
+    return merged[merged["_teste"].isna()].drop(columns="_teste").reset_index(drop=True)
