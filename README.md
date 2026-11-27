@@ -15,7 +15,7 @@ para todas, de forma justa e reproduzível.
 | 1 | Popularidade (contagem / média bayesiana) | O que todo mundo vê | ✅ |
 | 2 | Conteúdo (TF-IDF de gêneros e tags) | Filmes parecidos com os que você gostou | ✅ |
 | 3 | Filtragem colaborativa item-item | Quem gostou de X também gostou de Y | ✅ |
-| 4 | Fatoração de matrizes (SVD) | Gostos latentes de usuários e filmes | ⏳ |
+| 4 | Fatoração de matrizes (SVD) | Gostos latentes de usuários e filmes | ✅ |
 
 ## Metodologia
 - **Divisão temporal por usuário**: as últimas 5 avaliações de cada usuário vão para teste,
@@ -97,8 +97,10 @@ cobertura intermediária entre popularidade e conteúdo. Esperamos que:
 | Item-item k=200 (implícito) | 0,0264 | 0,0824 | 0,0546 | 7,0% | 3,9 s |
 | Item-item k=50 (notas) | 0,0220 | 0,0655 | 0,0506 | 12,3% | 2,3 s |
 
-**Primeiro modelo a superar a popularidade.** O melhor item-item (k=200) ganha cerca de 53% em
-precision, 67% em recall e 38% em NDCG, recomendando um catálogo 6 vezes mais variado.
+**Primeiro modelo a empatar com a popularidade em acerto, com 6 vezes mais diversidade.**
+Nas médias, o melhor item-item (k=200) fica cerca de 53% acima em precision, 67% em recall e
+38% em NDCG. Mas o teste de significância (abaixo) mostra que essa vantagem tem evidência
+fraca; o ganho de cobertura, por outro lado, é claro.
 
 - **K e cobertura:** confirmado. Quanto mais vizinhos, mais o modelo converge para os filmes
   populares (cobertura de 8,0% para 7,0%).
@@ -109,11 +111,46 @@ precision, 67% em recall e 38% em NDCG, recomendando um catálogo 6 vezes mais v
 
 ### Significância estatística
 
-*A preencher após `python scripts/comparar.py` (tabela "Comparações pareadas").*
+Comparações pareadas do NDCG@10 por bootstrap (2.000 reamostragens de usuários), fases 1 a 3:
 
-> **Cuidado com comparações múltiplas:** com cerca de 12 comparações a 95% de confiança, é
-> esperado que ao menos uma pareça significativa por acaso. Resultados com p perto de 0,05
-> devem ser lidos com cautela (uma correção de Bonferroni exigiria p < 0,004).
+| Comparação | Δ NDCG@10 | IC 95% | p | Resultado |
+|------------|----------:|-------:|--:|-----------|
+| Aleatório × Popularidade | −0,0396 | [−0,0495; −0,0308] | <0,001 | Popularidade melhor |
+| Pop. bayesiana × Pop. contagem | −0,0018 | [−0,0104; +0,0065] | 0,658 | Empate |
+| Conteúdo (gêneros) × Popularidade | −0,0370 | [−0,0474; −0,0278] | <0,001 | Popularidade melhor |
+| Conteúdo (+ tags) × Popularidade | −0,0351 | [−0,0457; −0,0260] | <0,001 | Popularidade melhor |
+| Item-item k=20 × Popularidade | +0,0118 | [−0,0004; +0,0237] | 0,055 | Empate |
+| Item-item k=50 × Popularidade | +0,0085 | [−0,0033; +0,0198] | 0,165 | Empate |
+| Item-item k=200 × Popularidade | +0,0150 | [+0,0014; +0,0278] | 0,029 | Item-item melhor* |
+| Item-item notas × Popularidade | +0,0110 | [−0,0012; +0,0224] | 0,081 | Empate |
+| Item-item k=200 × k=50 | +0,0066 | [−0,0009; +0,0141] | 0,089 | Empate |
+| Item-item k=200 × k=20 | +0,0032 | [−0,0065; +0,0126] | 0,515 | Empate |
+| Item-item implícito × notas | −0,0025 | [−0,0145; +0,0096] | 0,720 | Empate |
+| Conteúdo + tags × só gêneros | +0,0019 | [−0,0017; +0,0051] | 0,267 | Empate |
+
+\* *Não sobrevive à correção de Bonferroni para 12 comparações (p < 0,004).*
+
+**O que é sólido:** o aleatório e os modelos de conteúdo são piores que a popularidade, com
+folga. **O que não é:** a vantagem do item-item em acerto tem evidência fraca, e as diferenças
+entre valores de K, entre modos e entre variantes de conteúdo são indistinguíveis de ruído.
+
+**Por que é tão difícil separar os modelos:** são só 542 usuários, com cerca de 3 filmes
+relevantes cada, e acertos são raros. Isso gera muita variância. Uma base maior (como a
+MovieLens 1M, com 6 mil usuários) daria poder estatístico para conclusões mais firmes.
+
+> **Cuidado com comparações múltiplas:** quanto mais comparações a 95% de confiança, maior a
+> chance de alguma parecer significativa por acaso. O `comparar.py` marca como **robustas**
+> só as diferenças que sobrevivem à correção de Bonferroni.
+
+### Fase 4: fatoração de matrizes (SVD)
+
+**Hipótese registrada antes de rodar:** o SVD deve ficar próximo do item-item em acerto, já que
+os dois exploram o mesmo sinal (coocorrência de filmes), mas com cobertura menor: poucos fatores
+capturam principalmente os padrões dominantes, que são os dos filmes populares. Esperamos que
+**mais fatores** aumentem a cobertura e que, dado o poder estatístico limitado, a maioria das
+diferenças contra o item-item termine em empate.
+
+*Resultados: a preencher após `python scripts/comparar.py`.*
 
 ## Estrutura
 ```
@@ -127,7 +164,8 @@ src/recomendador/
     ├── base.py      # interface comum (fit / recommend)
     ├── popularity.py
     ├── content.py   # TF-IDF de gêneros e tags
-    └── item_knn.py  # colaborativa item-item com K vizinhos
+    ├── item_knn.py  # colaborativa item-item com K vizinhos
+    └── svd.py       # fatoração de matrizes (PureSVD)
 scripts/comparar.py  # tabela comparativa
 tests/
 ```
